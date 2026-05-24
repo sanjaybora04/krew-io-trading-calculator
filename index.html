@@ -1,0 +1,282 @@
+<!--
+CLICK PREVIEW TO START
+type your boat/ship current storage
+the calculator fills the storage to the (possible)maximum and calculates
+click on spent,earned,profit to sort in descending/ascending
+filter the rows based on source and destination
+    check strict filtering to exclude all possible trades
+    no copying pls
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{
+    font-family: consolas;
+}
+table{
+    border-collapse: collapse;
+    width: 80%;
+}
+
+th, td {
+  padding: 8px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+tr:hover {background-color:#f5f5f5;}
+
+input[type=text] {
+  width: 25%;
+  padding: 10px 10px;
+  box-sizing: border-box;
+  border: 3px solid #ccc;
+  -webkit-transition: 0.5s;
+  transition: 0.5s;
+  outline: none;
+}
+
+input[type=text]:focus {
+  border: 3px solid #555;
+}
+
+/* The container */
+.container {
+  display: inline-block;
+  position: relative;
+  padding-left: 35px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-size: 17px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Hide the browser's default checkbox */
+.container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #eee;
+}
+
+/* On mouse-over, add a grey background color */
+.container:hover input ~ .checkmark {
+  background-color: #ccc;
+}
+
+/* When the checkbox is checked, add a blue background */
+.container input:checked ~ .checkmark {
+  background-color: #2196F3;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+/* Show the checkmark when checked */
+.container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Style the checkmark/indicator */
+.container .checkmark:after {
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
+</style>
+</head>
+<body>
+    <input type="text" placeholder="storage of ship" size="14" onkeyup=calcByStorage(this.value) />
+    <br/><br/>
+    <label>From</label><br/>
+    <div id="fromSec"></div>
+    <label>To</label><br/>
+    <div id="toSec"></div>
+    <label class="container">Strict Filtering
+      <input type="checkbox" data-type="strict" onchange="filterRows();">
+      <span class="checkmark"></span>
+    </label>
+    <br/>
+    <table id="resTb">
+        <tr><td>Goods</td><td>buy at</td><td>sell at</td><td onclick='sortTableBy("boughtFor")'>spent</td><td onclick='sortTableBy("soldFor")'>earned</td><td onclick='sortTableBy("profit")'>profit</td></tr>
+    </table>
+<script>
+let  islandNames=["Spain","Phillipines","Guinea","malaysia","Brazil","Barabados","Taiwan","Cuba","Labrador","Jamaica",];
+let items=["Rum","Coffee","Spice","Silk","Gems","Sugar","Bananas"];
+let storageCapacity=6000;
+let itemCaps=[10,5,8,15,20,12,5];
+let itemPrices=[
+        [155,55,210,140,210,250,75],
+        [145,60,270,155,55,290,120],
+        [155,65,35,170,170,325,145],
+        [165,95,135,185,300,65,190],
+        [180,125,210,200,375,130,20],
+        [195,25,270,220,400,145,40],
+        [210,35,35,375,475,180,45],
+        [270,40,90,70,525,190,60],
+        [70,45,120,110,625,215,75],
+        [170,55,130,170,375,210,110],
+       
+];
+
+let results=[];
+
+let sortTableOrder={
+    boughtFor:true,
+    soldFor:true,
+    profit:false
+};
+
+generateFilters("source","fromSec");generateFilters("dest","toSec");
+
+function isleIdx(islandname){
+    return islandNames.indexOf(islandname);
+}
+
+function itemIdx(itemname){
+    return items.indexOf(itemname);
+}
+
+function itemMultiplier(islandname,itemname){
+    let multiplier=Math.floor(storageCapacity/itemCaps[itemIdx(itemname)]);
+    return itemPrices[isleIdx(islandname)][itemIdx(itemname)]*multiplier;
+}
+
+function cs(a,c=",",b=3){//custom separator
+    a=""+a;
+    var lmt=Math.ceil(a.length/b)-1;
+    for(var i=0;i<lmt;i++)
+        a=a.substring(0,a.length-b*(i+1)-i*c.length)+c+a.substring(a.length-b*(i+1)-i*c.length,a.length);
+    return a;
+}
+
+function dynamicSort(property) {
+    var sortOrder = 1;
+    if(property[0] === "-") {
+        sortOrder = -1;
+        property = property.substr(1);
+    }
+    return function (a,b) {
+        var result = (a[property] < b[property]) ? -1 : (a[property] > b[property]) ? 1 : 0;
+        return result * sortOrder;
+    }
+}
+
+function wrapTr(a,b=""){
+    return "<tr "+b+">"+a+"</tr>";
+}
+
+function wrapTd(a,b=""){
+    return "<td "+b+">"+a+"</td>";
+}
+
+function formTableData(objs){
+    let s='<tr><td>Goods</td><td>buy at</td><td>sell at</td><td onclick=\'sortTableBy("boughtFor")\'>spent</td><td onclick=\'sortTableBy("soldFor")\'>earned</td><td onclick=\'sortTableBy("profit")\'>profit</td></tr>';
+    for(let i=0;i<objs.length;i++){
+        let ts="";
+        for(property in objs[i]){
+            if(property.indexOf("For") > -1 || property.indexOf("profit") > -1)
+            ts+=wrapTd(cs(objs[i][property]));
+            else{
+                if(property.indexOf("boughtAt") > -1)
+                ts+=wrapTd(objs[i][property],"data-source="+objs[i][property]);
+                else
+                ts+=wrapTd(objs[i][property],"data-dest="+objs[i][property]);
+            }
+        }
+        s+=wrapTr(ts,"data-processed=data");
+    }
+    document.querySelector("table#resTb").innerHTML=s;
+}
+
+function generateFilters(dataType,targetDiv){
+    let s='';
+    for(island of islandNames)
+    s+=' <label class="container">'+island+'<input type="checkbox" data-target="'+island+'" data-type="'+dataType+'" onchange="filterRows();"><span class="checkmark"></span></label>';
+    document.querySelector("div#"+targetDiv).innerHTML=s;
+}
+
+function filterRows(){
+    if(document.querySelectorAll("input:not([data-type='strict']):checked").length > 0)
+    document.querySelectorAll("tr[data-processed]").forEach(x=>x.setAttribute("style","display: none;"));
+    if(document.querySelector("input[type='checkbox'][data-type='strict']:checked") && document.querySelectorAll("input[type='checkbox'][data-type='source']:checked").length > 0 && document.querySelectorAll("input[type='checkbox'][data-type='dest']:checked").length > 0)
+    document.querySelectorAll("input[type='checkbox'][data-type='source']:checked").forEach((x)=>{
+    document.querySelectorAll("tr[data-processed] > td[data-source='"+x.getAttribute("data-target")+"']+td[data-dest]").forEach(
+        (y)=>{
+            if(document.querySelector("input[type='checkbox'][data-target='"+y.getAttribute("data-dest")+"'][data-type='dest']:checked"))
+            y.parentElement.removeAttribute("style");
+        });
+    });
+    else
+    document.querySelectorAll("input[type='checkbox']:not([data-type='strict']):checked").forEach((x)=>{
+        document.querySelectorAll("tr[data-processed] > td[data-"+x.getAttribute("data-type")+"='"+x.getAttribute("data-target")+"']").forEach(x=>x.parentElement.removeAttribute("style"));
+    });
+    if(document.querySelectorAll("input:not([data-type='strict']):checked").length == 0)
+    document.querySelectorAll("tr[data-processed]").forEach(x=>x.removeAttribute("style"));
+}
+
+function sortTableBy(attr,ignoreOrder=false){
+    if(sortTableOrder[attr] || ignoreOrder)
+    formTableData(results.sort(dynamicSort("-"+attr)));
+    else
+    formTableData(results.sort(dynamicSort(attr)));
+    if(!ignoreOrder)
+    sortTableOrder[attr]=!sortTableOrder[attr];
+    filterRows();
+}
+
+function calcByStorage(val){
+    if(isNaN(val))
+    return;
+    storageCapacity=parseInt(val);
+    let processedObjects=[];
+    for(let i=0;i<islandNames.length;i++){
+        for(let k=0;k<items.length;k++){
+            for(let j=0;j<islandNames.length;j++){
+                if(islandNames[i]==islandNames[j])
+                continue;
+                if(itemMultiplier(islandNames[j],items[k])-itemMultiplier(islandNames[i],items[k]) > 0)
+                processedObjects.push({
+                    itemBought:items[k],
+                    boughtAt:islandNames[i],
+                    soldAt:islandNames[j],
+                    boughtFor:itemMultiplier(islandNames[i],items[k]),
+                    soldFor:itemMultiplier(islandNames[j],items[k]),
+                    profit:itemMultiplier(islandNames[j],items[k])-itemMultiplier(islandNames[i],items[k])
+                }); 
+            }
+        }
+    }
+    results=processedObjects;
+    sortTableBy("profit",true);
+    filterRows();
+}
+
+</script>
+</body>
+</html>
