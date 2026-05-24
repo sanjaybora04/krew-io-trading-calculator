@@ -1,282 +1,447 @@
-<!--
-CLICK PREVIEW TO START
-type your boat/ship current storage
-the calculator fills the storage to the (possible)maximum and calculates
-click on spent,earned,profit to sort in descending/ascending
-filter the rows based on source and destination
-    check strict filtering to exclude all possible trades
-    no copying pls
--->
 <!DOCTYPE html>
-<html>
+<html lang="en" class="dark">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Route Calculator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{mono:['Consolas','ui-monospace','monospace']}}}}</script>
 <style>
-body{
-    font-family: consolas;
-}
-table{
-    border-collapse: collapse;
-    width: 80%;
-}
-
-th, td {
-  padding: 8px;
-  text-align: center;
-  border-bottom: 1px solid #ddd;
-}
-
-tr:hover {background-color:#f5f5f5;}
-
-input[type=text] {
-  width: 25%;
-  padding: 10px 10px;
-  box-sizing: border-box;
-  border: 3px solid #ccc;
-  -webkit-transition: 0.5s;
-  transition: 0.5s;
-  outline: none;
-}
-
-input[type=text]:focus {
-  border: 3px solid #555;
-}
-
-/* The container */
-.container {
-  display: inline-block;
-  position: relative;
-  padding-left: 35px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  font-size: 17px;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* Hide the browser's default checkbox */
-.container input {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
-  height: 0;
-  width: 0;
-}
-
-/* Create a custom checkbox */
-.checkmark {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 25px;
-  width: 25px;
-  background-color: #eee;
-}
-
-/* On mouse-over, add a grey background color */
-.container:hover input ~ .checkmark {
-  background-color: #ccc;
-}
-
-/* When the checkbox is checked, add a blue background */
-.container input:checked ~ .checkmark {
-  background-color: #2196F3;
-}
-
-/* Create the checkmark/indicator (hidden when not checked) */
-.checkmark:after {
-  content: "";
-  position: absolute;
-  display: none;
-}
-
-/* Show the checkmark when checked */
-.container input:checked ~ .checkmark:after {
-  display: block;
-}
-
-/* Style the checkmark/indicator */
-.container .checkmark:after {
-  left: 9px;
-  top: 5px;
-  width: 5px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 3px 3px 0;
-  -webkit-transform: rotate(45deg);
-  -ms-transform: rotate(45deg);
-  transform: rotate(45deg);
-}
+  .chip-active{background:#dbeafe !important;border-color:#60a5fa !important;color:#1d4ed8 !important;}
+  .dark .chip-active{background:#1e3a5f !important;border-color:#3b82f6 !important;color:#93c5fd !important;}
+  .th-sorted{color:#2563eb !important;}
+  .dark .th-sorted{color:#60a5fa !important;}
+  .num{font-variant-numeric:tabular-nums;}
+  .price-input{width:56px;padding:3px 4px;font-size:12px;text-align:center;background:transparent;border:1px solid transparent;border-radius:4px;outline:none;font-family:inherit;color:inherit;}
+  .price-input:hover{border-color:#a8a29e;}
+  .price-input:focus{border-color:#60a5fa;background:#1e3a5f33;}
+  .dark .price-input:hover{border-color:#57534e;}
+  .tab-btn{padding:6px 14px;font-size:12px;border-radius:8px;cursor:pointer;border:1px solid transparent;transition:all .15s;background:transparent;}
+  .tab-btn.active{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd;}
+  .tab-btn:not(.active){color:#78716c;}
+  .tab-btn:not(.active):hover{color:#d6d3d1;background:#1c1917;}
+  .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 10px;border-radius:20px;font-size:12px;border:1px solid;cursor:default;}
+  .pill-remove{background:none;border:none;cursor:pointer;padding:0;line-height:1;opacity:.5;}
+  .pill-remove:hover{opacity:1;}
+  .add-input{font-size:12px;padding:4px 10px;border-radius:20px;border:1px dashed;background:transparent;outline:none;width:120px;font-family:inherit;}
 </style>
 </head>
-<body>
-    <input type="text" placeholder="storage of ship" size="14" onkeyup=calcByStorage(this.value) />
-    <br/><br/>
-    <label>From</label><br/>
-    <div id="fromSec"></div>
-    <label>To</label><br/>
-    <div id="toSec"></div>
-    <label class="container">Strict Filtering
-      <input type="checkbox" data-type="strict" onchange="filterRows();">
-      <span class="checkmark"></span>
-    </label>
-    <br/>
-    <table id="resTb">
-        <tr><td>Goods</td><td>buy at</td><td>sell at</td><td onclick='sortTableBy("boughtFor")'>spent</td><td onclick='sortTableBy("soldFor")'>earned</td><td onclick='sortTableBy("profit")'>profit</td></tr>
-    </table>
+<body class="bg-stone-50 dark:bg-stone-900 text-stone-800 dark:text-stone-200 font-mono min-h-screen p-8 transition-colors">
+<div class="max-w-5xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <i class="ti ti-ship text-3xl text-stone-400"></i>
+      <div>
+        <h1 class="text-lg font-medium text-stone-800 dark:text-stone-100">Trade route calculator</h1>
+        <p class="text-xs text-stone-400">Fill your hold and maximize profit</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="clearAll()" class="p-2 rounded-lg border border-stone-200 dark:border-stone-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-stone-400 hover:text-red-400 transition-colors" title="Clear all data">
+        <i class="ti ti-trash text-base"></i>
+      </button>
+      <button onclick="toggleDark()" class="p-2 rounded-lg border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 transition-colors" title="Toggle dark mode">
+        <i class="ti ti-moon text-base dark:hidden"></i>
+        <i class="ti ti-sun text-base hidden dark:inline"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-5">
+    <button class="tab-btn active" id="tab-calc" onclick="switchTab('calc')"><i class="ti ti-calculator text-xs mr-1"></i>Calculator</button>
+    <button class="tab-btn" id="tab-setup" onclick="switchTab('setup')"><i class="ti ti-settings text-xs mr-1"></i>Setup</button>
+    <button class="tab-btn" id="tab-prices" onclick="switchTab('prices')"><i class="ti ti-pencil text-xs mr-1"></i>Prices</button>
+  </div>
+
+  <!-- ═══ CALCULATOR TAB ═══ -->
+  <div id="pane-calc">
+    <div id="empty-state" class="hidden bg-white dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl p-10 text-center">
+      <i class="ti ti-map-off text-4xl text-stone-300 dark:text-stone-600 mb-3 block"></i>
+      <p class="text-stone-400 text-sm mb-1">No cities or items yet</p>
+      <p class="text-stone-400 text-xs">Go to <button onclick="switchTab('setup')" class="underline hover:text-stone-300">Setup</button> to add cities and items, then set prices in <button onclick="switchTab('prices')" class="underline hover:text-stone-300">Prices</button>.</p>
+    </div>
+    <div id="calc-content">
+      <div class="grid grid-cols-3 gap-3 mb-5">
+        <div class="bg-stone-100 dark:bg-stone-800 rounded-xl px-4 py-3">
+          <p class="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Cargo hold</p>
+          <p class="text-xl font-medium" id="s-cap">—</p>
+        </div>
+        <div class="bg-stone-100 dark:bg-stone-800 rounded-xl px-4 py-3">
+          <p class="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Best profit</p>
+          <p class="text-xl font-medium text-emerald-600 dark:text-emerald-400" id="s-best">—</p>
+        </div>
+        <div class="bg-stone-100 dark:bg-stone-800 rounded-xl px-4 py-3">
+          <p class="text-[10px] uppercase tracking-widest text-stone-400 mb-1">Routes</p>
+          <p class="text-xl font-medium" id="s-routes">0</p>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl p-5 mb-4">
+        <div class="flex items-center gap-3 mb-5">
+          <label class="text-xs text-stone-400 w-20 shrink-0">Hold size</label>
+          <input id="storageInput" type="text" placeholder="e.g. 6000"
+            class="font-mono text-sm px-3 py-2 w-36 bg-stone-100 dark:bg-stone-700 border border-stone-200 dark:border-stone-600 rounded-lg outline-none focus:border-stone-400 dark:focus:border-stone-400 transition-colors text-stone-800 dark:text-stone-100">
+        </div>
+        <div class="grid grid-cols-2 gap-5 mb-4">
+          <div>
+            <h4 class="text-[10px] uppercase tracking-widest text-stone-400 mb-2 flex items-center gap-1.5"><i class="ti ti-anchor text-xs"></i> From</h4>
+            <div class="flex flex-wrap gap-1.5" id="fromChips"></div>
+          </div>
+          <div>
+            <h4 class="text-[10px] uppercase tracking-widest text-stone-400 mb-2 flex items-center gap-1.5"><i class="ti ti-anchor text-xs"></i> To</h4>
+            <div class="flex flex-wrap gap-1.5" id="toChips"></div>
+          </div>
+        </div>
+        <label class="flex items-center gap-2 text-xs text-stone-400 cursor-pointer select-none mt-1">
+          <input type="checkbox" id="strictChk" class="w-3.5 h-3.5 accent-blue-500 cursor-pointer">
+          Strict filtering — only show routes where both source and destination are selected
+        </label>
+      </div>
+      <div class="bg-white dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl overflow-hidden">
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="bg-stone-50 dark:bg-stone-800">
+              <th class="px-4 py-3 text-left text-[10px] uppercase tracking-widest text-stone-400 font-medium border-b border-stone-100 dark:border-stone-700">Goods</th>
+              <th class="px-4 py-3 text-left text-[10px] uppercase tracking-widest text-stone-400 font-medium border-b border-stone-100 dark:border-stone-700">Route</th>
+              <th id="th-spent" onclick="sortBy('boughtFor')" class="sortable px-4 py-3 text-right text-[10px] uppercase tracking-widest text-stone-400 font-medium border-b border-stone-100 dark:border-stone-700 cursor-pointer hover:text-stone-600 dark:hover:text-stone-200 select-none transition-colors">Spent <i class="ti ti-selector text-[10px]"></i></th>
+              <th id="th-earned" onclick="sortBy('soldFor')" class="sortable px-4 py-3 text-right text-[10px] uppercase tracking-widests text-stone-400 font-medium border-b border-stone-100 dark:border-stone-700 cursor-pointer hover:text-stone-600 dark:hover:text-stone-200 select-none transition-colors">Earned <i class="ti ti-selector text-[10px]"></i></th>
+              <th id="th-profit" onclick="sortBy('profit')" class="sortable th-sorted px-4 py-3 text-right text-[10px] uppercase tracking-widest font-medium border-b border-stone-100 dark:border-stone-700 cursor-pointer select-none transition-colors">Profit <i class="ti ti-arrow-down text-[10px]"></i></th>
+            </tr>
+          </thead>
+          <tbody id="tblBody">
+            <tr><td colspan="5" class="text-center py-10 text-stone-400 text-xs">Enter your hold size to see trade routes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SETUP TAB ═══ -->
+  <div id="pane-setup" class="hidden space-y-4">
+    <!-- Cities -->
+    <div class="bg-white dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl p-5">
+      <p class="text-[10px] uppercase tracking-widest text-stone-400 mb-3">Cities</p>
+      <div class="flex flex-wrap gap-2 items-center" id="cityPills"></div>
+    </div>
+    <!-- Items -->
+    <div class="bg-white dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl p-5">
+      <p class="text-[10px] uppercase tracking-widest text-stone-400 mb-3">Trade goods</p>
+      <div class="flex flex-wrap gap-2 items-center" id="itemPills"></div>
+    </div>
+    <!-- Item caps -->
+    <div class="bg-white dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl p-5">
+      <p class="text-[10px] uppercase tracking-widest text-stone-400 mb-3">Cargo units per slot</p>
+      <div class="flex flex-wrap gap-4 items-center" id="capsRow"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PRICES TAB ═══ -->
+  <div id="pane-prices" class="hidden">
+    <div id="prices-empty" class="hidden bg-white dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl p-10 text-center">
+      <i class="ti ti-table-off text-4xl text-stone-300 dark:text-stone-600 mb-3 block"></i>
+      <p class="text-stone-400 text-sm">Add cities and items in <button onclick="switchTab('setup')" class="underline hover:text-stone-300">Setup</button> first.</p>
+    </div>
+    <div id="prices-table-wrap" class="bg-white dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 rounded-2xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-stone-100 dark:border-stone-700">
+        <p class="text-xs text-stone-400">Click any cell to edit. Rows = cities (buy here), columns = goods.</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="border-collapse text-xs w-full" id="priceTable"></table>
+      </div>
+    </div>
+  </div>
+
+</div>
 <script>
-let  islandNames=["Spain","Phillipines","Guinea","malaysia","Brazil","Barabados","Taiwan","Cuba","Labrador","Jamaica",];
-let items=["Rum","Coffee","Spice","Silk","Gems","Sugar","Bananas"];
-let storageCapacity=6000;
-let itemCaps=[10,5,8,15,20,12,5];
-let itemPrices=[
-        [155,55,210,140,210,250,75],
-        [145,60,270,155,55,290,120],
-        [155,65,35,170,170,325,145],
-        [165,95,135,185,300,65,190],
-        [180,125,210,200,375,130,20],
-        [195,25,270,220,400,145,40],
-        [210,35,35,375,475,180,45],
-        [270,40,90,70,525,190,60],
-        [70,45,120,110,625,215,75],
-        [170,55,130,170,375,210,110],
-       
-];
+// ── palette for items ──────────────────────────────────────────
+const PALETTE=["#D85A30","#7C5230","#1D9E75","#7F77DD","#639922","#D4537E","#EF9F27","#378ADD","#A32D2D","#0F6E56","#BA7517","#533AB7"];
+function itemColor(k){return PALETTE[k%PALETTE.length];}
 
-let results=[];
+// ── storage helpers ────────────────────────────────────────────
+function load(key,def){try{const v=localStorage.getItem(key);return v!==null?JSON.parse(v):def;}catch{return def;}}
+function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch{}}
 
-let sortTableOrder={
-    boughtFor:true,
-    soldFor:true,
-    profit:false
-};
+// ── state ──────────────────────────────────────────────────────
+let islandNames=load('tc_cities',[]);
+let items=load('tc_items',[]);
+let itemCaps=load('tc_caps',[]);
+// prices: 2D array [cityIdx][itemIdx]
+let itemPrices=load('tc_prices',[]);
 
-generateFilters("source","fromSec");generateFilters("dest","toSec");
-
-function isleIdx(islandname){
-    return islandNames.indexOf(islandname);
+// ensure prices matrix is sized correctly
+function syncPricesMatrix(){
+  // grow/shrink rows
+  while(itemPrices.length<islandNames.length) itemPrices.push([]);
+  itemPrices=itemPrices.slice(0,islandNames.length);
+  // grow/shrink cols
+  itemPrices=itemPrices.map(row=>{
+    while(row.length<items.length) row.push(0);
+    return row.slice(0,items.length);
+  });
+  save('tc_prices',itemPrices);
 }
 
-function itemIdx(itemname){
-    return items.indexOf(itemname);
+let storageCapacity=load('tc_storage',0);
+let results=[], sortKey='profit', sortDesc=true;
+
+const cs=n=>n.toLocaleString();
+
+function itemMultiplier(i,k){
+  const cap=itemCaps[k]||1;
+  return itemPrices[i][k]*Math.floor(storageCapacity/cap);
 }
 
-function itemMultiplier(islandname,itemname){
-    let multiplier=Math.floor(storageCapacity/itemCaps[itemIdx(itemname)]);
-    return itemPrices[isleIdx(islandname)][itemIdx(itemname)]*multiplier;
+// ── dark mode ──────────────────────────────────────────────────
+function toggleDark(){
+  document.documentElement.classList.toggle('dark');
+  save('tc_dark', document.documentElement.classList.contains('dark'));
+}
+if(load('tc_dark',true)) document.documentElement.classList.add('dark');
+else document.documentElement.classList.remove('dark');
+
+// ── tabs ───────────────────────────────────────────────────────
+function switchTab(t){
+  ['calc','setup','prices'].forEach(id=>{
+    document.getElementById('pane-'+id).classList.toggle('hidden',id!==t);
+    document.getElementById('tab-'+id).classList.toggle('active',id===t);
+  });
+  if(t==='prices') buildPriceTable();
+  if(t==='setup'){buildSetupPills();buildCapsRow();}
+  if(t==='calc'){buildChips();checkEmptyState();calcRoutes();}
 }
 
-function cs(a,c=",",b=3){//custom separator
-    a=""+a;
-    var lmt=Math.ceil(a.length/b)-1;
-    for(var i=0;i<lmt;i++)
-        a=a.substring(0,a.length-b*(i+1)-i*c.length)+c+a.substring(a.length-b*(i+1)-i*c.length,a.length);
-    return a;
+// ── clear all ─────────────────────────────────────────────────
+function clearAll(){
+  if(!confirm('Clear all cities, items and prices?')) return;
+  islandNames=[];items=[];itemCaps=[];itemPrices=[];storageCapacity=0;
+  ['tc_cities','tc_items','tc_caps','tc_prices','tc_storage'].forEach(k=>localStorage.removeItem(k));
+  buildSetupPills();buildCapsRow();buildChips();buildPriceTable();checkEmptyState();calcRoutes();
 }
 
-function dynamicSort(property) {
-    var sortOrder = 1;
-    if(property[0] === "-") {
-        sortOrder = -1;
-        property = property.substr(1);
-    }
-    return function (a,b) {
-        var result = (a[property] < b[property]) ? -1 : (a[property] > b[property]) ? 1 : 0;
-        return result * sortOrder;
-    }
+// ── setup: city/item pills ─────────────────────────────────────
+function buildSetupPills(){
+  renderPills('cityPills', islandNames, removeCityAt, '#60a5fa','#1e3a5f','#93c5fd');
+  renderPills('itemPills', items, removeItemAt, '#34d399','#064e3b','#6ee7b7');
 }
 
-function wrapTr(a,b=""){
-    return "<tr "+b+">"+a+"</tr>";
+function renderPills(containerId, arr, removeFn, borderC, bgC, textC){
+  const c=document.getElementById(containerId);
+  const isDark=document.documentElement.classList.contains('dark');
+  let html=arr.map((name,i)=>`
+    <span class="pill" style="border-color:${borderC};background:${isDark?bgC+'55':bgC+'22'};color:${isDark?textC:borderC}">
+      ${name}
+      <button class="pill-remove" onclick="${removeFn.name}(${i})" title="Remove"><i class="ti ti-x" style="font-size:10px"></i></button>
+    </span>`).join('');
+  // add input
+  const placeholder=containerId==='cityPills'?'Add city…':'Add item…';
+  const addFn=containerId==='cityPills'?'addCity':'addItem';
+  html+=`<input class="add-input text-stone-500 dark:text-stone-400 border-stone-300 dark:border-stone-600 focus:border-blue-400" placeholder="${placeholder}" onkeydown="if(event.key==='Enter'&&this.value.trim()){${addFn}(this.value.trim());this.value='';}">`;
+  c.innerHTML=html;
 }
 
-function wrapTd(a,b=""){
-    return "<td "+b+">"+a+"</td>";
+function addCity(name){
+  if(islandNames.includes(name)) return;
+  islandNames.push(name);
+  save('tc_cities',islandNames);
+  syncPricesMatrix();
+  buildSetupPills();
+}
+function removeCityAt(i){
+  islandNames.splice(i,1);
+  itemPrices.splice(i,1);
+  save('tc_cities',islandNames);
+  save('tc_prices',itemPrices);
+  buildSetupPills();
+}
+function addItem(name){
+  if(items.includes(name)) return;
+  items.push(name);
+  itemCaps.push(1);
+  save('tc_items',items);
+  save('tc_caps',itemCaps);
+  syncPricesMatrix();
+  buildSetupPills();
+  buildCapsRow();
+}
+function removeItemAt(k){
+  items.splice(k,1);
+  itemCaps.splice(k,1);
+  itemPrices=itemPrices.map(row=>{row.splice(k,1);return row;});
+  save('tc_items',items);
+  save('tc_caps',itemCaps);
+  save('tc_prices',itemPrices);
+  buildSetupPills();
+  buildCapsRow();
 }
 
-function formTableData(objs){
-    let s='<tr><td>Goods</td><td>buy at</td><td>sell at</td><td onclick=\'sortTableBy("boughtFor")\'>spent</td><td onclick=\'sortTableBy("soldFor")\'>earned</td><td onclick=\'sortTableBy("profit")\'>profit</td></tr>';
-    for(let i=0;i<objs.length;i++){
-        let ts="";
-        for(property in objs[i]){
-            if(property.indexOf("For") > -1 || property.indexOf("profit") > -1)
-            ts+=wrapTd(cs(objs[i][property]));
-            else{
-                if(property.indexOf("boughtAt") > -1)
-                ts+=wrapTd(objs[i][property],"data-source="+objs[i][property]);
-                else
-                ts+=wrapTd(objs[i][property],"data-dest="+objs[i][property]);
-            }
-        }
-        s+=wrapTr(ts,"data-processed=data");
-    }
-    document.querySelector("table#resTb").innerHTML=s;
+// ── caps row ───────────────────────────────────────────────────
+function buildCapsRow(){
+  const row=document.getElementById('capsRow');
+  if(!items.length){row.innerHTML='<p class="text-xs text-stone-400">No items added yet.</p>';return;}
+  row.innerHTML=items.map((item,k)=>`
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-2 h-2 rounded-full shrink-0" style="background:${itemColor(k)}"></span>
+      <span class="text-xs text-stone-500 dark:text-stone-400 min-w-[60px]">${item}</span>
+      <input class="price-input dark:text-stone-200" type="number" min="1" value="${itemCaps[k]||1}" data-k="${k}">
+    </div>`).join('');
+  row.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const k=+inp.dataset.k, v=parseInt(inp.value);
+      if(!isNaN(v)&&v>0){itemCaps[k]=v;save('tc_caps',itemCaps);calcRoutes();}
+      else inp.value=itemCaps[k]||1;
+    });
+  });
 }
 
-function generateFilters(dataType,targetDiv){
-    let s='';
-    for(island of islandNames)
-    s+=' <label class="container">'+island+'<input type="checkbox" data-target="'+island+'" data-type="'+dataType+'" onchange="filterRows();"><span class="checkmark"></span></label>';
-    document.querySelector("div#"+targetDiv).innerHTML=s;
+// ── price table ────────────────────────────────────────────────
+function buildPriceTable(){
+  const empty=!islandNames.length||!items.length;
+  document.getElementById('prices-empty').classList.toggle('hidden',!empty);
+  document.getElementById('prices-table-wrap').classList.toggle('hidden',empty);
+  if(empty) return;
+  syncPricesMatrix();
+  const t=document.getElementById('priceTable');
+  let html=`<tr><td class="px-3 py-2 sticky left-0 bg-white dark:bg-stone-800 z-10 border-b border-stone-100 dark:border-stone-700"></td>`;
+  items.forEach((item,k)=>{
+    html+=`<td class="px-3 py-2 text-center font-medium border-b border-stone-100 dark:border-stone-700 whitespace-nowrap">
+      <span class="inline-block w-2 h-2 rounded-full mr-1 align-middle" style="background:${itemColor(k)}"></span>${item}
+    </td>`;
+  });
+  html+=`</tr>`;
+  islandNames.forEach((isle,i)=>{
+    html+=`<tr class="border-b border-stone-100 dark:border-stone-700/50 last:border-0 hover:bg-stone-50 dark:hover:bg-stone-700/20">
+      <td class="px-3 py-1.5 text-stone-500 dark:text-stone-400 whitespace-nowrap sticky left-0 bg-white dark:bg-stone-800 z-10">${isle}</td>`;
+    items.forEach((_,k)=>{
+      html+=`<td class="px-1 py-1 text-center">
+        <input class="price-input dark:text-stone-200" type="number" min="0" data-i="${i}" data-k="${k}" value="${itemPrices[i]?.[k]??0}">
+      </td>`;
+    });
+    html+=`</tr>`;
+  });
+  t.innerHTML=html;
+  t.querySelectorAll('input.price-input').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const i=+inp.dataset.i, k=+inp.dataset.k, v=parseInt(inp.value);
+      if(!isNaN(v)&&v>=0){itemPrices[i][k]=v;save('tc_prices',itemPrices);calcRoutes();}
+      else inp.value=itemPrices[i]?.[k]??0;
+    });
+  });
+}
+
+// ── chips ──────────────────────────────────────────────────────
+function buildChips(){
+  _buildChipSet('fromChips');
+  _buildChipSet('toChips');
+}
+function _buildChipSet(id){
+  const c=document.getElementById(id);
+  c.innerHTML=islandNames.map(n=>`<label data-island="${n}" class="chip inline-flex items-center px-2.5 py-1 rounded-full text-xs border border-stone-200 dark:border-stone-600 bg-stone-50 dark:bg-stone-700 text-stone-500 dark:text-stone-400 cursor-pointer hover:border-stone-400 dark:hover:border-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-all select-none"><input type="checkbox" class="hidden">${n}</label>`).join('');
+  c.querySelectorAll('label').forEach(l=>{
+    l.querySelector('input').addEventListener('change',()=>{
+      l.classList.toggle('chip-active',l.querySelector('input').checked);
+      filterRows();
+    });
+  });
+}
+
+// ── empty state ────────────────────────────────────────────────
+function checkEmptyState(){
+  const empty=!islandNames.length||!items.length;
+  document.getElementById('empty-state').classList.toggle('hidden',!empty);
+  document.getElementById('calc-content').classList.toggle('hidden',empty);
+}
+
+// ── calc ───────────────────────────────────────────────────────
+function calcRoutes(){
+  if(!islandNames.length||!items.length){results=[];renderTable();return;}
+  syncPricesMatrix();
+  const objs=[];
+  for(let i=0;i<islandNames.length;i++)
+    for(let k=0;k<items.length;k++)
+      for(let j=0;j<islandNames.length;j++){
+        if(i===j) continue;
+        const bought=itemMultiplier(i,k);
+        const sold=itemMultiplier(j,k);
+        if(sold-bought>0) objs.push({item:items[k],iIdx:k,from:islandNames[i],to:islandNames[j],boughtFor:bought,soldFor:sold,profit:sold-bought});
+      }
+  results=objs;
+  document.getElementById('s-routes').textContent=cs(results.length);
+  sortBy(sortKey,true);
+}
+
+function sortBy(key,skipToggle=false){
+  document.querySelectorAll('th.sortable').forEach(t=>t.classList.remove('th-sorted'));
+  const map={boughtFor:'th-spent',soldFor:'th-earned',profit:'th-profit'};
+  document.getElementById(map[key])?.classList.add('th-sorted');
+  if(!skipToggle&&key===sortKey) sortDesc=!sortDesc;
+  else if(!skipToggle) sortDesc=true;
+  sortKey=key;
+  results.sort((a,b)=>sortDesc?b[key]-a[key]:a[key]-b[key]);
+  renderTable();
+  filterRows();
+}
+
+function renderTable(){
+  const body=document.getElementById('tblBody');
+  if(!results.length){
+    body.innerHTML='<tr><td colspan="5" class="text-center py-10 text-stone-400 text-xs">No profitable routes found</td></tr>';
+    document.getElementById('s-best').textContent='—';
+    return;
+  }
+  document.getElementById('s-best').textContent=cs(results[0].profit);
+  body.innerHTML=results.map(r=>`
+    <tr data-from="${r.from}" data-to="${r.to}" class="border-b border-stone-100 dark:border-stone-700/60 last:border-0 hover:bg-stone-50 dark:hover:bg-stone-700/30 transition-colors">
+      <td class="px-4 py-2.5"><div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full shrink-0" style="background:${itemColor(r.iIdx)}"></span>
+        <span class="text-stone-700 dark:text-stone-200">${r.item}</span>
+      </div></td>
+      <td class="px-4 py-2.5"><div class="flex items-center gap-1 text-xs text-stone-400">
+        <span>${r.from}</span><i class="ti ti-arrow-right text-[10px]"></i><span>${r.to}</span>
+      </div></td>
+      <td class="px-4 py-2.5 text-right num text-stone-500 dark:text-stone-400 text-xs">${cs(r.boughtFor)}</td>
+      <td class="px-4 py-2.5 text-right num text-stone-500 dark:text-stone-400 text-xs">${cs(r.soldFor)}</td>
+      <td class="px-4 py-2.5 text-right num font-medium text-emerald-600 dark:text-emerald-400 text-xs">${cs(r.profit)}</td>
+    </tr>`).join('');
 }
 
 function filterRows(){
-    if(document.querySelectorAll("input:not([data-type='strict']):checked").length > 0)
-    document.querySelectorAll("tr[data-processed]").forEach(x=>x.setAttribute("style","display: none;"));
-    if(document.querySelector("input[type='checkbox'][data-type='strict']:checked") && document.querySelectorAll("input[type='checkbox'][data-type='source']:checked").length > 0 && document.querySelectorAll("input[type='checkbox'][data-type='dest']:checked").length > 0)
-    document.querySelectorAll("input[type='checkbox'][data-type='source']:checked").forEach((x)=>{
-    document.querySelectorAll("tr[data-processed] > td[data-source='"+x.getAttribute("data-target")+"']+td[data-dest]").forEach(
-        (y)=>{
-            if(document.querySelector("input[type='checkbox'][data-target='"+y.getAttribute("data-dest")+"'][data-type='dest']:checked"))
-            y.parentElement.removeAttribute("style");
-        });
-    });
-    else
-    document.querySelectorAll("input[type='checkbox']:not([data-type='strict']):checked").forEach((x)=>{
-        document.querySelectorAll("tr[data-processed] > td[data-"+x.getAttribute("data-type")+"='"+x.getAttribute("data-target")+"']").forEach(x=>x.parentElement.removeAttribute("style"));
-    });
-    if(document.querySelectorAll("input:not([data-type='strict']):checked").length == 0)
-    document.querySelectorAll("tr[data-processed]").forEach(x=>x.removeAttribute("style"));
+  const from=[...document.querySelectorAll('#fromChips .chip-active')].map(c=>c.dataset.island);
+  const to=[...document.querySelectorAll('#toChips .chip-active')].map(c=>c.dataset.island);
+  const strict=document.getElementById('strictChk').checked;
+  document.querySelectorAll('#tblBody tr[data-from]').forEach(row=>{
+    const f=row.dataset.from,t=row.dataset.to;
+    if(!from.length&&!to.length){row.style.display='';return;}
+    let show;
+    if(strict&&from.length&&to.length) show=from.includes(f)&&to.includes(t);
+    else show=from.includes(f)||to.includes(t);
+    row.style.display=show?'':'none';
+  });
 }
 
-function sortTableBy(attr,ignoreOrder=false){
-    if(sortTableOrder[attr] || ignoreOrder)
-    formTableData(results.sort(dynamicSort("-"+attr)));
-    else
-    formTableData(results.sort(dynamicSort(attr)));
-    if(!ignoreOrder)
-    sortTableOrder[attr]=!sortTableOrder[attr];
-    filterRows();
-}
+// ── hold size ──────────────────────────────────────────────────
+document.getElementById('storageInput').addEventListener('input',e=>{
+  const v=parseInt(e.target.value);
+  if(!isNaN(v)&&v>0){
+    storageCapacity=v;
+    save('tc_storage',v);
+    document.getElementById('s-cap').textContent=cs(v);
+    calcRoutes();
+  }
+});
+document.getElementById('strictChk').addEventListener('change',filterRows);
 
-function calcByStorage(val){
-    if(isNaN(val))
-    return;
-    storageCapacity=parseInt(val);
-    let processedObjects=[];
-    for(let i=0;i<islandNames.length;i++){
-        for(let k=0;k<items.length;k++){
-            for(let j=0;j<islandNames.length;j++){
-                if(islandNames[i]==islandNames[j])
-                continue;
-                if(itemMultiplier(islandNames[j],items[k])-itemMultiplier(islandNames[i],items[k]) > 0)
-                processedObjects.push({
-                    itemBought:items[k],
-                    boughtAt:islandNames[i],
-                    soldAt:islandNames[j],
-                    boughtFor:itemMultiplier(islandNames[i],items[k]),
-                    soldFor:itemMultiplier(islandNames[j],items[k]),
-                    profit:itemMultiplier(islandNames[j],items[k])-itemMultiplier(islandNames[i],items[k])
-                }); 
-            }
-        }
-    }
-    results=processedObjects;
-    sortTableBy("profit",true);
-    filterRows();
+// ── init ───────────────────────────────────────────────────────
+syncPricesMatrix();
+if(storageCapacity>0){
+  document.getElementById('storageInput').value=storageCapacity;
+  document.getElementById('s-cap').textContent=cs(storageCapacity);
 }
-
+buildChips();
+checkEmptyState();
+calcRoutes();
 </script>
 </body>
 </html>
